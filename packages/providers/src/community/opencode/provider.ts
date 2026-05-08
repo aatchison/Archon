@@ -6,12 +6,13 @@ import type {
   ProviderCapabilities,
 } from '../../types';
 import { OPENCODE_CAPABILITIES } from './capabilities';
+import { resolveOpenCodeBinaryPath } from './binary-resolver';
 import { createLogger } from '@archon/paths';
 
 const log = createLogger('provider.opencode');
 
 export class OpenCodeProvider implements IAgentProvider {
-  private readonly binaryPath = '/home/aatchison/.opencode/bin/opencode';
+  constructor(private readonly configBinaryPath?: string) {}
 
   getType(): string {
     return 'opencode';
@@ -44,10 +45,12 @@ export class OpenCodeProvider implements IAgentProvider {
 
     args.push(prompt);
 
+    const binaryPath = await resolveOpenCodeBinaryPath(this.configBinaryPath);
+
     log.info({ args, cwd }, 'opencode.query_started');
 
     const processEnv = globalThis.process?.env || {};
-    const child = spawn([this.binaryPath, ...args], {
+    const child = spawn([binaryPath, ...args], {
       cwd,
       stdout: 'pipe',
       stderr: 'pipe',
