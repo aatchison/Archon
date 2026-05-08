@@ -1,0 +1,12 @@
+{
+  "name": "Archon Development",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["oven.bun-vscode", "dbaeumer.vscode-eslint"]
+    }
+  },
+  "remoteUser": "vscode"
+}
