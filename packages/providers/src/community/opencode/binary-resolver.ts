@@ -89,10 +89,7 @@ export async function resolveOpenCodeBinaryPath(
       : join(homedir(), '.opencode', 'bin', 'opencode');
 
   if (fileExists(autodetectPath)) {
-    getLog().info(
-      { binaryPath: autodetectPath, source: 'autodetect' },
-      'opencode.binary_resolved'
-    );
+    getLog().info({ binaryPath: autodetectPath, source: 'autodetect' }, 'opencode.binary_resolved');
     return autodetectPath;
   }
 

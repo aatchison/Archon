@@ -247,10 +247,7 @@ describe('OpenCodeProvider', () => {
     // Actually, the simplest approach is to point the binary to a shell script
     // that we write to /tmp. Let's write a temp script.
     const scriptPath = '/tmp/archon-test-opencode-fail.sh';
-    await Bun.write(
-      scriptPath,
-      '#!/bin/sh\necho "fatal: bad config" >&2\nexit 2\n'
-    );
+    await Bun.write(scriptPath, '#!/bin/sh\necho "fatal: bad config" >&2\nexit 2\n');
     await Bun.spawn(['chmod', '+x', scriptPath]).exited;
 
     mockResolveBinary.mockImplementation(async () => scriptPath);
