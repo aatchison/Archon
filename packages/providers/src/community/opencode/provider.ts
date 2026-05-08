@@ -11,6 +11,26 @@ import { createLogger } from '@archon/paths';
 
 const log = createLogger('provider.opencode');
 
+/**
+ * Build the CLI argument list for an opencode run invocation.
+ * Exported for unit testing without spawning a real process.
+ */
+export function buildOpenCodeArgs(
+  prompt: string,
+  resumeSessionId?: string,
+  options?: SendQueryOptions
+): string[] {
+  const args = ['run'];
+  if (resumeSessionId) {
+    args.push('--session', resumeSessionId);
+  }
+  if (options?.model) {
+    args.push('--model', options.model);
+  }
+  args.push(prompt);
+  return args;
+}
+
 export class OpenCodeProvider implements IAgentProvider {
   constructor(private readonly configBinaryPath?: string) {}
 
@@ -33,17 +53,7 @@ export class OpenCodeProvider implements IAgentProvider {
       throw new Error('Query aborted');
     }
 
-    const args = ['run'];
-
-    if (resumeSessionId) {
-      args.push('--session', resumeSessionId);
-    }
-
-    if (options?.model) {
-      args.push('--model', options.model);
-    }
-
-    args.push(prompt);
+    const args = buildOpenCodeArgs(prompt, resumeSessionId, options);
 
     const binaryPath = await resolveOpenCodeBinaryPath(this.configBinaryPath);
 
