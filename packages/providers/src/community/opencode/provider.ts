@@ -27,8 +27,13 @@ export class OpenCodeProvider implements IAgentProvider {
     resumeSessionId?: string,
     options?: SendQueryOptions
   ): AsyncGenerator<MessageChunk> {
+    // Fix #3: Honor abortSignal — throw immediately on pre-aborted entry.
+    if (options?.abortSignal?.aborted) {
+      throw new Error('Query aborted');
+    }
+
     const args = ['run'];
-    
+
     if (resumeSessionId) {
       args.push('--session', resumeSessionId);
     }
@@ -51,6 +56,26 @@ export class OpenCodeProvider implements IAgentProvider {
 
     const stdout = child.stdout;
 
+    // Fix #3: Propagate abort signal to the subprocess. Use { once: true } so
+    // the listener auto-removes after firing and we don't need to track it.
+    const onAbort = (): void => {
+      child.kill();
+    };
+    options?.abortSignal?.addEventListener('abort', onAbort, { once: true });
+
+    // Fix #1: Drain stderr concurrently with stdout. POSIX pipes will deadlock
+    // the subprocess once the kernel pipe buffer (~64 KB) fills up if we never
+    // read from stderr. Collect lines so we can surface them in the result chunk.
+    const stderrLines: string[] = [];
+    const stderrDone = (async (): Promise<void> => {
+      for await (const chunk of child.stderr) {
+        const text = new TextDecoder().decode(chunk).trim();
+        if (text) {
+          stderrLines.push(text);
+        }
+      }
+    })();
+
     try {
       for await (const chunk of stdout) {
         const text = new TextDecoder().decode(chunk).trim();
@@ -58,7 +83,33 @@ export class OpenCodeProvider implements IAgentProvider {
           yield { type: 'assistant', content: text };
         }
       }
+
+      // Wait for stderr drain to complete before reading stderrLines.
+      await stderrDone;
+
+      // Fix #2: Wait for the child process to exit and capture the exit code.
+      const exitCode = await child.exited;
+
+      // Fix #4: Pair opencode.query_started with _completed or _failed.
+      if (exitCode === 0) {
+        log.info({ exitCode }, 'opencode.query_completed');
+      } else {
+        log.warn({ exitCode, stderr: stderrLines }, 'opencode.query_failed');
+      }
+
+      // Fix #2: Emit a terminal result chunk so callers (dag-executor, orchestrator)
+      // can detect errors and surface them — matching the Claude/Codex contract.
+      yield {
+        type: 'result',
+        isError: exitCode !== 0,
+        errors: exitCode !== 0 ? stderrLines : undefined,
+        sessionId: resumeSessionId,
+        stopReason: exitCode === 0 ? 'completed' : 'error',
+      };
     } finally {
+      // Remove abort listener if it hasn't fired (no-op when { once: true } already fired).
+      options?.abortSignal?.removeEventListener('abort', onAbort);
+
       if (child.exitCode === null) {
         child.kill();
       }
