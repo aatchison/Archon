@@ -4,7 +4,7 @@ import type {
   SendQueryOptions,
   MessageChunk,
   ProviderCapabilities,
-} from '../types';
+} from '../../types';
 import { OPENCODE_CAPABILITIES } from './capabilities';
 import { createLogger } from '@archon/paths';
 
