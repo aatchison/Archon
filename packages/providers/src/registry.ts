@@ -15,11 +15,10 @@ import type {
 } from './types';
 import { ClaudeProvider } from './claude/provider';
 import { CodexProvider } from './codex/provider';
-import { OpenCodeProvider } from './opencode/provider';
 import { CLAUDE_CAPABILITIES } from './claude/capabilities';
 import { CODEX_CAPABILITIES } from './codex/capabilities';
-import { OPENCODE_CAPABILITIES } from './opencode/capabilities';
 import { registerPiProvider } from './community/pi/registration';
+import { registerOpenCodeProvider } from './community/opencode/registration';
 import { UnknownProviderError } from './errors';
 import { createLogger } from '@archon/paths';
 
@@ -110,13 +109,6 @@ export function isRegisteredProvider(id: string): boolean {
 export function registerBuiltinProviders(): void {
   const builtins: ProviderRegistration[] = [
     {
-      id: 'opencode',
-      displayName: 'OpenCode',
-      factory: () => new OpenCodeProvider(),
-      capabilities: OPENCODE_CAPABILITIES,
-      builtIn: true,
-    },
-    {
       id: 'claude',
       displayName: 'Claude (Anthropic)',
       factory: () => new ClaudeProvider(),
@@ -162,6 +154,7 @@ export function registerBuiltinProviders(): void {
  */
 export function registerCommunityProviders(): void {
   registerPiProvider();
+  registerOpenCodeProvider();
 }
 
 /** @internal Test-only — clears the registry. Not for production use. */
